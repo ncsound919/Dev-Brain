@@ -1,0 +1,74 @@
+Define the system methodology
+
+Define the system methodology as a **principled multi-brain decision loop**: intake the problem, route it to the right sector brains, let leader councils deliberate, aggregate their judgments with weighted credibility, then audit the result and learn from outcomes over time.[1][2][3][4]
+In other words, Dev-Brain should behave less like one chatbot and more like a governed cognitive architecture with specialized agents, shared memory, orchestration, and human oversight where needed.[5][6][7][8]
+## Method core
+- Method name: **Perceive -> Route -> Deliberate -> Synthesize -> Govern -> Learn**.[2][1][9]
+- The reason for using this structure is that multi-agent systems perform best when roles, communication, coordination, and validation are explicitly designed instead of left implicit inside one general model.[1][6][10]
+- The system-level objective is not to mimic famous people word-for-word, but to encode their heuristics as reusable decision profiles inside domain-specific brains that can collaborate or disagree in a shared environment.[1][11][3]
+## Operating loop
+- **Perceive** means normalize the user’s question, extract goals, constraints, time horizon, and missing context, because multi-agent systems first need a clearly defined problem and environment before agent coordination works reliably.[1][6]
+- **Route** means classify the decision and activate the right brains, leader profiles, and analysis depth, which matches cognitive architectures that separate perception, semantic understanding, and orchestration into distinct layers.[2][5]
+- **Deliberate** means each brain runs its internal council and produces options, risks, evidence, and objections, which follows ensemble and committee-style multi-agent decision-making rather than single-stream reasoning.[12][11][3]
+- **Synthesize** means a meta-brain compares outputs, resolves conflicts, applies hard constraints, and returns one decision package with rationale, alternatives, and confidence.[2][13][7]
+- **Govern** means every consequential decision is logged with inputs, reasoning context, policy state, and approval path so the result can be reconstructed later.[4][14][15]
+- **Learn** means outcomes feed back into memory, profile weights, and policy updates so the next decision starts from a better world-model instead of a blank slate.[16][17][18][19]
+## Brain logic
+- Each sector brain should use the same internal methodology: activate relevant leader profiles, gather independent judgments, identify convergence and disagreement, and turn those views into a scored domain recommendation.[3][20][21]
+- Not all votes should count equally, because believability-weighted systems explicitly give more weight to contributors with repeated success and clear cause-effect reasoning in the topic at hand.[22][23][24]
+- That gives you a clean pattern for every brain: leader profile selection -> individual assessments -> weighted voting or ranking -> domain output -> cross-brain negotiation.[3][22][7]
+## Memory and governance
+- The memory model should have at least three layers: short-term task context, shared cross-brain state, and long-term episodic history of prior decisions and outcomes.[16][18][25]
+- Shared memory matters because multiple agents need access to the same state to avoid contradictory reasoning and to build on each other’s work instead of duplicating it.[16][18]
+- Governance should use risk tiers, where low-risk outputs can be logged and released automatically, medium-risk outputs trigger review, and high-risk outputs require human sign-off or override authority.[8][26][27]
+- Your audit trail should capture the output itself, the environmental snapshot around it, and the oversight actions tied to it, because those three layers make the system explainable and defensible.[4][28][14][15][29]
+## Practical spec
+- If you want one sentence for the repo, use this: **“Dev-Brain is a multi-brain cognitive decision engine that routes a problem to specialized sector councils, aggregates their believability-weighted judgments through a meta-brain, and returns an auditable recommendation that improves through shared memory and outcome feedback.”**[2][1][22][4]
+- If you want one paragraph for the manifest, define the methodology as a five-layer architecture: perception, routing, domain reasoning, orchestration, and memory/governance, with a continuous feedback loop from outcomes back into state and weighting.[2][5][7][18]
+Would you like me to turn this into a formal methodology section for your MANIFEST_REVISED.md next?
+
+Citations:
+[1] What is a multi-agent system in AI? | Google Cloud https://cloud.google.com/discover/what-is-a-multi-agent-system
+[2] The EGI Framework: A Five-Layer Multi-Agent Cognitive Architecture https://www.scirp.org/journal/paperinformation?paperid=149013
+[3] Multi-agent Ensemble Decision-Making - Emergent Mind https://www.emergentmind.com/topics/multi-agent-ensemble-decision-making-09aec320-96c9-44d2-a698-04f5fe227e7b
+[4] Agent Decision Audit and Explainability https://air-governance-framework.finos.org/mitigations/mi-21_agent-decision-audit-and-explainability.html
+[5] Cognitive architecture in AI: How agents learn, reason, and ... https://sema4.ai/learning-center/cognitive-architecture-ai/
+[6] Multi-Agent Systems: Architecture, Applications & Real-World Impact https://www.cognizant.com/us/en/ai-lab/blog/what-are-multi-agent-systems
+[7] The Orchestration of Multi-Agent Systems: Architectures, Protocols ... https://arxiv.org/html/2601.13671v1
+[8] What Is Human In The Loop (HITL)? - IBM https://www.ibm.com/think/topics/human-in-the-loop
+[9] Process Intelligence Explained: Mining, Orchestration, and ... https://www.kai-waehner.de/blog/2026/06/10/process-intelligence-explained-mining-orchestration-and-the-decision-gate/
+[10] Choosing Between Building a Single-Agent System or Multi-Agent ... https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ai-agents/single-agent-multiple-agents
+[11] Ensemble Decision-Making in Multi-Agent Systems - Emergent Mind https://www.emergentmind.com/topics/multi-agent-ensemble-decision-making
+[12] A Multi-Agent Collaborative Intelligent Decision-Making Framework https://dl.acm.org/doi/10.1145/3789297.3789355
+[13] Supervisory and Meta-Cognitive Layers - Emergent Mind https://www.emergentmind.com/topics/supervisory-or-meta-cognitive-layer
+[14] AI audit trails: What to log for models and agents, and how ... https://www.collibra.com/blog/ai-audit-trails-what-to-log-for-models-and-agents-and-how-a-command-center-captures-it
+[15] Why Audit AI Decision Making: A 2026 Guide https://mlflow.org/articles/why-audit-ai-decision-making-a-2026-guide/
+[16] Building Agents That Remember: State Management in Multi-Agent ... https://ranjankumar.in/building-agents-that-remember-state-management-in-multi-agent-ai-systems
+[17] [PDF] the Theory and Practice of Multi-Agent World Models https://www.cs.umd.edu/content/building-better-multi-agent-systems-theory-and-practice-multi-agent-world-models
+[18] How to Design Multi-Agent Memory Systems for Production - Mem0 https://mem0.ai/blog/multi-agent-memory-systems
+[19] Multi-Agent Systems: From Classical Paradigms to Large ... - arXiv https://arxiv.org/html/2604.18133v1
+[20] [PDF] Reliable Decision-Making for Multi-Agent LLM Systems https://multiagents.org/2025_artifacts/reliable_decision_making_for_multi_agent_llm_systems.pdf
+[21] Ensemble Learning: Combining ML Models for Better Predictions https://www.snowflake.com/en/artificial-intelligence/machine-learning/ensemble-learning/
+[22] Believability Weight Your Decision Making - Principles by Ray Dalio https://www.principles.com/principles/633d5d13-8610-425f-ad62-cd62347d9165/
+[23] Believability Weighted Decision Making: Does it Work? - Shortform https://www.shortform.com/blog/believability-weighted-decision-making/
+[24] Bridgewater Associates' believability-weighted system for ... https://www.bastianmoritz.com/blog/bridgewater-associates-believability-weighted-system-for-algorithmic-decision-making/
+[25] AI Agent Memory Architectures for Multi-Agent Systems https://zylos.ai/research/2026-03-09-multi-agent-memory-architectures-shared-isolated-hierarchical/
+[26] Human-in-the-Loop Artificial Intelligence: A Systematic Review of ... https://www.mdpi.com/1099-4300/28/4/377
+[27] Human-In-The-Loop In AI Validation And Control From Principle To ... https://www.clinicalleader.com/doc/human-in-the-loop-in-ai-validation-and-control-from-principle-to-practice-0001
+[28] Audit-as-code: a policy-as-code framework for continuous AI ... https://pmc.ncbi.nlm.nih.gov/articles/PMC12979488/
+[29] AI audit trail | AI Governance Lexicon https://verifywise.ai/lexicon/ai-model-audit-trail
+[30] Cognition-Inspired DataOps as a Framework for ... https://www.epj-conferences.org/articles/epjconf/abs/2026/37/epjconf_aicset2026_00009/epjconf_aicset2026_00009.html
+[31] AI Agent Architecture: Single vs Multi-Agent Systems - Galileo AI https://galileo.ai/blog/choosing-the-right-ai-agent-architecture-single-vs-multi-agent-systems
+[32] [PDF] A Multi-Agent System framework to support the decision-making in ... https://upcommons.upc.edu/bitstreams/360062eb-5a4b-4b9a-8717-08b17f516ce7/download
+[33] Multi-agent multi-criteria decision framework with interactive ... https://www.sciencedirect.com/science/article/abs/pii/S095741742300862X
+[34] A Comprehensive Survey on Multi-Agent Cooperative Decision ... https://arxiv.org/html/2503.13415v1
+[35] Cognitive Agent Architectures: Revolutionizing AI with ... https://smythos.com/developers/agent-development/cognitive-agent-architectures/
+[36] LLM-based Multi-Agent Decision-Making: Challenges and Future ... https://ieeexplore.ieee.org/abstract/document/10970024/
+[37] When Architecture Starts Thinking: The Shift to Cognitive ... https://www.linkedin.com/pulse/when-architecture-starts-thinking-shift-cognitive-william-p83pe
+[38] Large Language Models Ensemble Weak Reinforcement Learning ... https://arxiv.org/html/2505.15306v1
+[39] Believability weight your decision making. - Action from Principles https://www.mentorist.app/action/believability-weight-your-decision-making/
+[40] Cognitive Architectures for AI Agents: From Perception to Action https://zylos.ai/research/2026-03-12-cognitive-architectures-ai-agents-perception-to-action/
+[41] [PDF] Ensemble Value Functions for Efficient Exploration in Multi-Agent ... https://www.ifaamas.org/Proceedings/aamas2025/pdfs/p1849.pdf
+[42] Life Principles 5.10; Believability weight your decision making. https://www.linkedin.com/pulse/life-principles-510-believability-weight-your-decision-ray-dalio
+[43] Explainable AI Governance: Frameworks for Trust, https://www.alation.com/blog/what-is-explainable-ai-governance/
+[44] I think “human-in-the-loop” may become one of the biggest ... - Reddit https://www.reddit.com/r/artificial/comments/1td300k/i_think_humanintheloop_may_become_one_of_the/
