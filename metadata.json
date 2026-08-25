@@ -1,0 +1,6 @@
+{
+  "name": "Dev Brain",
+  "description": "Deterministic decision engine with first-principles justification proofs, multi-horizon Monte Carlo outcome simulations, closed-loop post-mortem calibration with Brier scores, adversarial red-team stress testing, cross-sector synthesis, and 100 leader genomes across Dev, Business, Financial, and Science domains.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
