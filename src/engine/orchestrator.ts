@@ -68,7 +68,7 @@ export class MultiAgentOrchestrator {
     const avgConfidence = weightedConfSum / totalWeights;
 
     const uniqueSectors = new Set(allAgents.map(a => a.sector)).size;
-    const sectorDiversity = Number((uniqueSectors / 5).toFixed(2));
+    const sectorDiversity = Number((uniqueSectors / 6).toFixed(2));
 
     return {
       agreementLevel: Math.min(1, Math.max(0.78, 0.72 + (allAgents.length / 25) * 0.25)),

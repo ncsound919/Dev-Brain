@@ -36,7 +36,8 @@ import {
   Play,
   Filter,
   BatteryWarning,
-  Globe
+  Globe,
+  Megaphone
 } from 'lucide-react';
 import { ALL_LEADER_GENOMES, GENOMES_BY_SECTOR } from './data/genomes';
 import { SECTORS } from './data/sectors';
@@ -67,6 +68,7 @@ const SECTOR_ICONS: Record<SectorType, typeof Code2> = {
   dev: Code2,
   business: Briefcase,
   financial: TrendingUp,
+  marketing: Megaphone,
   science_biotech: Dna,
   science_sports: Activity
 };
@@ -108,6 +110,12 @@ const SAMPLE_SCENARIOS = [
     sector: 'dev' as SectorType,
     text: 'Design a memory-efficient training loop for a 7B parameter LLM on consumer hardware (24GB VRAM) with mixed precision, 4-bit base weights, and gradient accumulation.',
     recommended: ['andrej-karpathy', 'tim-dettmers', 'soumith-chintala', 'rohan-anil']
+  },
+  {
+    title: 'Marketing: Owned-Audience Flywheel vs Paid Burst',
+    sector: 'marketing' as SectorType,
+    text: 'Allocate $12k monthly marketing budget across owned channels (Listmonk email, Twenty CRM, SEO content) vs rented reach (Postiz social, paid burst) to maximize 12-month CAC payback and durable list ownership.',
+    recommended: ['seth-godin-mktg', 'byron-sharp', 'joe-pulizzi', 'elena-verna']
   }
 ];
 
@@ -288,11 +296,11 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <h1 className="text-2xl font-bold tracking-tight text-white">Dev Brain OS</h1>
                   <span className="text-[10px] font-mono uppercase bg-amber-400/10 border border-amber-400/30 text-amber-400 px-2 py-0.5 rounded-full font-semibold">
-                    100 Leaders • 5 Sectors
+                    120 Leaders • 6 Sectors
                   </span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Multifaceted deterministic decision engine • Dev, Business, Financial & Science Brains
+                  Multifaceted deterministic decision engine • Dev, Business, Marketing, Financial & Science Brains
                 </p>
               </div>
             </div>
@@ -1204,7 +1212,7 @@ export default function App() {
                 <div>
                   <h2 className="text-base font-semibold text-white flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-amber-400" />
-                    <span>Complete 100 Leader Genomes Library Across 5 Sectors</span>
+                    <span>Complete 120 Leader Genomes Library Across 6 Sectors</span>
                   </h2>
                   <p className="text-xs text-slate-400">
                     Formally audited mental models, optimization patterns, and toolchains for Dev, Business, Financial, Biotech & Sports Science
@@ -1252,7 +1260,7 @@ export default function App() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search all 100 leaders by name, model..."
+                    placeholder="Search all 120 leaders by name, model..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-700"
                   />
                 </div>

@@ -54,6 +54,27 @@ export const TRIAGE_STRATEGY_WEIGHTS: Record<
   }
 };
 
+/**
+ * How many composite points a candidate may gain or lose from context fit,
+ * applied as a MEAN-CENTERED additive term: `base + CONTEXT_TILT_POINTS *
+ * (fit - meanFit)`. Centering is what makes this safe: when no candidate
+ * matches the problem — including every existing caller that passes a
+ * context-free problem — every term is exactly 0 and both the scores and the
+ * ordering are bit-identical to before. Only candidates that fit the problem
+ * better than their peers move, and they move enough to outrank a structurally
+ * higher base (e.g. a lane whose tags happen to hit ECOSYSTEM_DOMAIN_KEYWORDS).
+ */
+const CONTEXT_TILT_POINTS = 50;
+
+const CONTEXT_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'that', 'this', 'from', 'into', 'order', 'first',
+  'last', 'than', 'then', 'when', 'are', 'was', 'were', 'not', 'but', 'its', 'has',
+  'have', 'you', 'your', 'our', 'their', 'them', 'they', 'can', 'will', 'should',
+  'must', 'run', 'runs', 'get', 'got', 'out', 'all', 'any', 'per', 'via', 'use',
+  'used', 'how', 'why', 'what', 'which', 'who', 'one', 'two', 'new', 'old',
+]);
+
+
 export class CandidateTriageEngine {
   /**
    * Evaluates a wide pool of 18-25 candidate methods and trims down to the Top 5 best methods.
@@ -70,12 +91,19 @@ export class CandidateTriageEngine {
 
     const weights = TRIAGE_STRATEGY_WEIGHTS[strategy] || TRIAGE_STRATEGY_WEIGHTS.balanced_pareto;
 
+    // Context-fit tilt (mean-centered, additive). See contextFit/CONTEXT_TILT_POINTS:
+    // when the problem matches no candidate every term is 0, so this is an exact
+    // no-op for context-free callers — same scores, same ordering.
+    const fits = rawPool.map((c) => this.contextFit(problem, c));
+    const meanFit = fits.length ? fits.reduce((a, b) => a + b, 0) / fits.length : 0;
+
     // Score each candidate method
-    const evaluatedCandidates: CandidateMethod[] = rawPool.map(cand => {
-      const composite = this.calculateCompositeScore(cand.preScreenScores, weights);
+    const evaluatedCandidates: CandidateMethod[] = rawPool.map((cand, i) => {
+      const base = this.calculateCompositeScore(cand.preScreenScores, weights);
+      const composite = base + CONTEXT_TILT_POINTS * (fits[i] - meanFit);
       return {
         ...cand,
-        compositeTriageScore: Math.round(composite * 10) / 10
+        compositeTriageScore: Math.round(Math.min(100, Math.max(0, composite)) * 10) / 10
       };
     });
 
@@ -249,6 +277,41 @@ export class CandidateTriageEngine {
   }
 
   /**
+   * Lexical overlap between the problem/signal text and a candidate's own
+   * wording. This is the ONLY place caller intent enters scoring — every
+   * preScreenScore comes from the candidate's descriptors, so without this a
+   * supplied problem cannot change the ranking at all (the failure mode that
+   * made /api/repair/triage return the same winner for every signal).
+   *
+   * Matches exactly first ("401", "ssrf"), then by >=4-char prefix so
+   * blocked/block and failures/fail line up. Returns 0..1.
+   */
+  public static contextFit(problem: string, cand: CandidateMethod): number {
+    const problemTokens = this.contextTokens(problem ?? '');
+    if (problemTokens.length === 0) return 0;
+    const hay = [cand.title, cand.description, cand.category, ...(cand.tags ?? []), ...(cand.keyStrengths ?? [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    if (!hay) return 0;
+    const hayTokens = new Set(this.contextTokens(hay));
+    let matches = 0;
+    for (const t of problemTokens) {
+      if (hay.includes(t)) { matches += 1; continue; }
+      if (t.length >= 4) {
+        for (const h of hayTokens) {
+          if (h.length >= 4 && (h.startsWith(t.slice(0, 4)) || t.startsWith(h.slice(0, 4)))) { matches += 1; break; }
+        }
+      }
+    }
+    return Math.min(1, matches / problemTokens.length);
+  }
+
+  private static contextTokens(text: string): string[] {
+    return (text.toLowerCase().match(/[a-z0-9][a-z0-9_./-]{2,}/g) ?? []).filter((t) => !CONTEXT_STOPWORDS.has(t));
+  }
+
+  /**
    * Generates a realistic wide pool of 18-25 candidate methods across sectors.
    */
   public static generateCandidatePool(
@@ -277,7 +340,12 @@ export class CandidateTriageEngine {
       return this.getBusinessCandidatePool();
     }
 
-    // 5. DEFAULT DEV & DISTRIBUTED SYSTEMS ARCHITECTURE (20 Candidate Methods)
+    // 5. MARKETING / GROWTH / BRAND / LIFECYCLE
+    if (p.includes('marketing') || p.includes('brand') || p.includes('seo') || p.includes('content') || p.includes('campaign') || p.includes('positioning') || p.includes('plg') || p.includes('lifecycle') || sector === 'marketing') {
+      return this.getMarketingCandidatePool();
+    }
+
+    // 6. DEFAULT DEV & DISTRIBUTED SYSTEMS ARCHITECTURE (20 Candidate Methods)
     return this.getDevArchitectureCandidatePool();
   }
 
@@ -1040,6 +1108,112 @@ export class CandidateTriageEngine {
         keyVulnerabilities: ['Corporate email domain blacklisting, severe brand reputation damage, and 0.04% conversion rate'],
         estimatedImplementationWeeks: 1,
         tags: ['Domain Burn', 'Spam', 'Pruned']
+      }
+    ];
+  }
+
+  private static getMarketingCandidatePool(): CandidateMethod[] {
+    return [
+      {
+        id: 'mkt_m1_owned_audience_flywheel',
+        rank: 0,
+        title: 'Owned-Audience Flywheel: Permission Content + Lifecycle Automation',
+        category: 'Owned Audience & Compounding',
+        description: 'Earn permission (Seth Godin) with useful content (Ann Handley / Joe Pulizzi) and convert via lifecycle automation (Elena Verna) into Listmonk + Twenty owned asset.',
+        originSource: 'Marketing Genome (Seth Godin + Joe Pulizzi + Elena Verna)',
+        preScreenScores: { feasibility: 88, constraintFit: 92, complexityBoundedness: 86, riskFloor: 94, speedToValue: 78, strategicUpside: 96 },
+        compositeTriageScore: 0,
+        status: 'shortlisted_top_5',
+        triageVerdict: '',
+        keyStrengths: ['CAC deflation 30-45% in 12 mo via owned list', 'High deliverability with Listmonk hygiene', 'Attribution via Shlink + Umami → Twenty'],
+        keyVulnerabilities: ['90-day compounding lag before inflection'],
+        estimatedImplementationWeeks: 6,
+        tags: ['Owned Audience', 'Permission', 'Lifecycle', 'Flywheel'],
+        supportingLeaderGenomeId: 'seth-godin-mktg'
+      },
+      {
+        id: 'mkt_m2_category_positioning_play',
+        rank: 0,
+        title: 'Category Design + Obviously Awesome Positioning Sprint',
+        category: 'Positioning & Narrative',
+        description: 'Design the category (Christopher Lochhead) and anchor positioning with Dunford Canvas + Neumeier Onliness to own a word in the mind.',
+        originSource: 'Marketing Genome (Lochhead + Dunford + Neumeier + Al Ries)',
+        preScreenScores: { feasibility: 84, constraintFit: 90, complexityBoundedness: 82, riskFloor: 88, speedToValue: 72, strategicUpside: 97 },
+        compositeTriageScore: 0,
+        status: 'shortlisted_top_5',
+        triageVerdict: '',
+        keyStrengths: ['Category kings earn 76% of value', 'Cures sales confusion, lifts win-rate', 'Distinctive assets compound mental availability'],
+        keyVulnerabilities: ['Requires CEO-level narrative commitment 6-12 mo'],
+        estimatedImplementationWeeks: 8,
+        tags: ['Category Design', 'Positioning', 'Narrative'],
+        supportingLeaderGenomeId: 'christopher-lochhead'
+      },
+      {
+        id: 'mkt_m3_seo_audience_research_engine',
+        rank: 0,
+        title: 'SEO Audience Engine: SparkToro Research + Zero-Click Content Velocity',
+        category: 'Performance & SEO',
+        description: 'Audience research (Rand Fishkin / SparkToro) → intent-matched content velocity (Neil Patel) → zero-click discoverability.',
+        originSource: 'Marketing Genome (Rand Fishkin + Neil Patel + Byron Sharp)',
+        preScreenScores: { feasibility: 90, constraintFit: 93, complexityBoundedness: 84, riskFloor: 86, speedToValue: 88, strategicUpside: 92 },
+        compositeTriageScore: 0,
+        status: 'shortlisted_top_5',
+        triageVerdict: '',
+        keyStrengths: ['Durable SEO moat', 'Audience > algorithm', 'Mental + physical availability lift'],
+        keyVulnerabilities: ['Zero-click SERP exposure if not paired with distinctive assets'],
+        estimatedImplementationWeeks: 5,
+        tags: ['SEO', 'Audience Research', 'Zero-Click'],
+        supportingLeaderGenomeId: 'rand-fishkin'
+      },
+      {
+        id: 'mkt_m4_growth_loop_product_channel_fit',
+        rank: 0,
+        title: 'Growth Loops + Product-Channel Fit Engine',
+        category: 'Growth Loops',
+        description: 'Loops > funnels (Casey Winters) with product-channel fit diagnostic and Reforge-style compounding re-investment.',
+        originSource: 'Marketing Genome (Casey Winters + Dharmesh Shah)',
+        preScreenScores: { feasibility: 86, constraintFit: 89, complexityBoundedness: 80, riskFloor: 84, speedToValue: 86, strategicUpside: 94 },
+        compositeTriageScore: 0,
+        status: 'shortlisted_top_5',
+        triageVerdict: '',
+        keyStrengths: ['Usage creates distribution', 'PLG + inbound flywheel synergy', 'Compounding not linear'],
+        keyVulnerabilities: ['Needs cross-functional growth team, not siloed marketing'],
+        estimatedImplementationWeeks: 6,
+        tags: ['Growth Loops', 'PLG', 'Reforge'],
+        supportingLeaderGenomeId: 'casey-winters'
+      },
+      {
+        id: 'mkt_m5_conversational_real_time',
+        rank: 0,
+        title: 'Conversational Real-Time Capture: Drift-Style Routing (<5 min response)',
+        category: 'Lifecycle & Real-Time',
+        description: 'Replace forms with real-time conversational routing (David Cancel) — capture intent at peak, route to owned nurture.',
+        originSource: 'Marketing Genome (David Cancel + Dharmesh Shah)',
+        preScreenScores: { feasibility: 88, constraintFit: 91, complexityBoundedness: 85, riskFloor: 90, speedToValue: 90, strategicUpside: 88 },
+        compositeTriageScore: 0,
+        status: 'shortlisted_top_5',
+        triageVerdict: '',
+        keyStrengths: ['Lead latency <5 min', 'Conversation is conversion', 'High intent capture'],
+        keyVulnerabilities: ['Requires real-time staffing or smart bot fallback'],
+        estimatedImplementationWeeks: 3,
+        tags: ['Conversational', 'Real-Time', 'Lifecycle'],
+        supportingLeaderGenomeId: 'david-cancel'
+      },
+      {
+        id: 'mkt_m6_spray_and_pray_generic_blast',
+        rank: 0,
+        title: 'Generic Spray-and-Pray Blast (No Tilt, No Permission)',
+        category: 'Outbound Tactics',
+        description: 'Broad generic email blast without tilt, permission, or audience research — rented attention without owned asset.',
+        originSource: 'Low-Quality Tactics',
+        preScreenScores: { feasibility: 92, constraintFit: 38, complexityBoundedness: 70, riskFloor: 28, speedToValue: 80, strategicUpside: 22 },
+        compositeTriageScore: 0,
+        status: 'pruned_eliminated',
+        triageVerdict: '',
+        keyStrengths: ['High volume in 24h'],
+        keyVulnerabilities: ['List burnout, deliverability collapse, no compounding, brand damage'],
+        estimatedImplementationWeeks: 1,
+        tags: ['Spam', 'No Tilt', 'Pruned']
       }
     ];
   }

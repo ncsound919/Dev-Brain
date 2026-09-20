@@ -2,6 +2,7 @@ export type SectorType =
   | 'dev' 
   | 'business' 
   | 'financial' 
+  | 'marketing'
   | 'science_biotech' 
   | 'science_sports';
 
@@ -489,7 +490,7 @@ export interface DecisionMatrixResult {
   recommendedOptionId: string;
   synthesisRationale: string;
   tradeOffSummary: string;
-  generatedBy: 'deterministic_engine' | 'ollama_local_model' | 'hybrid' | 'custom' | 'gemini_model';
+  generatedBy: 'deterministic_engine' | 'ollama_local_model' | 'local_model' | 'hybrid' | 'custom' | 'gemini_model';
   modelUsed?: string;
   timestamp: string;
   normalizedPercentageSum: number; // always 100

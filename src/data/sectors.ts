@@ -34,6 +34,17 @@ export const SECTORS: Record<SectorType, SectorDefinition> = {
     councils: ['Value Investing & Moats', 'Macro Cycles & Believability', 'Corporate Valuation & DCF', 'CFO & FP&A Operations', 'Fintech & Banking Strategy'],
     leaderCount: 20
   },
+  marketing: {
+    id: 'marketing',
+    name: 'Marketing Brain (Growth & Distribution)',
+    shortName: 'Marketing Brain',
+    icon: 'Megaphone',
+    badgeColor: 'bg-pink-500/10 border-pink-500/30 text-pink-400',
+    accentColor: 'pink',
+    description: 'Positioning, permission & performance marketing, brand systems, growth loops, content & lifecycle automation.',
+    councils: ['Brand & Positioning', 'Performance & Growth Loops', 'Content & Permission', 'Lifecycle & CRM', 'Analytics & Attribution'],
+    leaderCount: 20
+  },
   science_biotech: {
     id: 'science_biotech',
     name: 'Science Brain (Biotech & Oncology)',

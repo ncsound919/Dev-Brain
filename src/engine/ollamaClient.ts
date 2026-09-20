@@ -9,8 +9,8 @@ import {
 import { DecisionMatrixEngine } from './decisionMatrixEngine';
 
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
-  baseUrl: 'http://localhost:11434',
-  selectedModel: 'llama3.2',
+  baseUrl: 'http://127.0.0.1:11434',
+  selectedModel: 'minicpm5-2b',
   temperature: 0.3,
   topP: 0.9,
   systemPrompt: 'You are an expert executive decision analyst and tactical reasoning engine. When analyzing choices, provide rigorous percentage-weighted evaluations with detailed pros and cons.',
@@ -46,13 +46,14 @@ export class OllamaClient {
     models: OllamaModelInfo[];
     error?: string;
   }> {
+    const modelName = this.config.selectedModel || DEFAULT_OLLAMA_CONFIG.selectedModel;
     const models: OllamaModelInfo[] = [{
-      name: "gemini-3.7-flash",
-      model: "gemini-3.7-flash",
+      name: modelName,
+      model: modelName,
       modified_at: new Date().toISOString(),
       size: 0,
-      digest: "gemini",
-      details: { format: "api", family: "gemini", parameter_size: "unknown", quantization_level: "fp16" }
+      digest: "local",
+      details: { format: "gguf", family: "minicpm5", parameter_size: "2B", quantization_level: "Q4_K_M" }
     }];
 
     this.config = {
@@ -61,7 +62,7 @@ export class OllamaClient {
       isChecking: false,
       lastChecked: new Date().toISOString(),
       availableModels: models,
-      selectedModel: "gemini-3.7-flash",
+      selectedModel: modelName,
       connectionError: undefined
     };
 
@@ -69,13 +70,14 @@ export class OllamaClient {
   }
 
   /**
-   * Direct text/reasoning generation via backend Gemini API
+   * Direct text/reasoning generation via the local-first backend (MiniCPM5-2B,
+   * falling back to Gemini when the local server is unavailable).
    */
   public async generate(
     req: OllamaReasoningRequest,
     onToken?: (token: string) => void
   ): Promise<OllamaReasoningResponse> {
-    const model = 'gemini-3.7-flash';
+    const model = this.config.selectedModel || DEFAULT_OLLAMA_CONFIG.selectedModel;
     const startTime = performance.now();
 
     try {
@@ -162,7 +164,8 @@ export class OllamaClient {
   }
 
   /**
-   * Weighs decision options with percentage weights and pros/cons using Gemini
+   * Weighs decision options with percentage weights and pros/cons using the
+   * local-first LLM (MiniCPM5-2B, Gemini fallback).
    */
   public async weighDecisionWithOptions(
     topic: string,
@@ -215,28 +218,28 @@ export class OllamaClient {
         const topOption = normalizedOptions.find(o => o.recommended) || normalizedOptions[0];
 
         return {
-          id: `matrix_gemini_${Date.now()}`,
+          id: `matrix_local_${Date.now()}`,
           decisionTopic: parsed.decisionTopic || topic,
           context,
           totalOptionsCount: normalizedOptions.length,
           options: normalizedOptions,
           recommendedOptionId: topOption ? topOption.id : 'opt_1',
-          synthesisRationale: parsed.synthesisRationale || `Evaluated by Gemini model with ${normalizedOptions.length} ranked alternatives.`,
+          synthesisRationale: parsed.synthesisRationale || `Evaluated by the local model with ${normalizedOptions.length} ranked alternatives.`,
           tradeOffSummary: parsed.tradeOffSummary || `Balanced trade-off between ${normalizedOptions[0]?.title} and alternative paths.`,
-          generatedBy: 'gemini_model',
-          modelUsed: 'gemini-3.7-flash',
+          generatedBy: 'local_model',
+          modelUsed: this.config.selectedModel || DEFAULT_OLLAMA_CONFIG.selectedModel,
           timestamp: new Date().toISOString(),
           normalizedPercentageSum: 100
         };
       }
     } catch (err) {
-      console.warn('Failed to parse Gemini JSON decision matrix, falling back to deterministic matrix engine:', err);
+      console.warn('Failed to parse LLM JSON decision matrix, falling back to deterministic matrix engine:', err);
     }
 
     // Fallback to deterministic matrix
     const matrix = DecisionMatrixEngine.generateMatrix(topic + ' ' + context);
     matrix.generatedBy = 'hybrid';
-    matrix.modelUsed = `gemini-3.7-flash (Hybrid Fallback)`;
+    matrix.modelUsed = `${this.config.selectedModel || DEFAULT_OLLAMA_CONFIG.selectedModel} (Hybrid Fallback)`;
     return matrix;
   }
 }

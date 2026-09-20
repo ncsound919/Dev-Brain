@@ -403,7 +403,90 @@ export class DecisionMatrixEngine {
       ];
     }
 
-    // Scenario 4: Software / AI / Dev Architecture
+    // Scenario 4: Marketing / Growth / Distribution
+    if (p.includes('marketing') || p.includes('brand') || p.includes('seo') || p.includes('content') || p.includes('growth') || p.includes('campaign') || p.includes('positioning') || p.includes('permission') || sector === 'marketing') {
+      return [
+        {
+          id: 'opt_owned_audience_flywheel',
+          title: 'Owned-Audience Flywheel: Permission Content + Lifecycle Automation (Earn, Don\'t Rent)',
+          description: 'Compound owned audience (email/CRM/community + SEO) with permission content and lifecycle triggers; rent reach only to feed the owned asset.',
+          weightPercentage: 54,
+          confidenceScore: 94,
+          pros: [
+            'Compounding owned audience asset deflates CAC by 30-45% within 12 months',
+            'Permission content (Youtility + Everybody Writes) earns trust before ask, lifting conversion 2-3x',
+            'Lifecycle automation (conversational + inbound) captures intent at peak and reduces lead latency to <5 min',
+            'Attribution via owned links/CRM (Shlink + Twenty) gives durable measurement vs platform rent'
+          ],
+          cons: [
+            'Slower initial reach vs pure paid burst — requires 90-day content compounding before inflection',
+            'Demands disciplined tilt (Content Inc.) and tilt-guarded calendar, not campaign-think',
+            'Requires CRM hygiene and list health (Listmonk deliverability) as hard constraint'
+          ],
+          riskLevel: 'LOW',
+          expectedROI: '2.8x 12-mo blended CAC payback, owned list as balance-sheet asset',
+          timeToValue: '45–90 days to inflection; 12-mo compounding moat',
+          recommended: true,
+          verdictTag: 'STRONGLY_RECOMMENDED',
+          mitigationStrategy: 'Pair with underpriced-attention sprints (Gary V / platform-native) capped at 20% of spend to feed owned list without renting long-term.',
+          supportingLeaders: leaders.slice(0, 3).length > 0 ? leaders.slice(0, 3) : ['Seth Godin', 'Joe Pulizzi', 'Dharmesh Shah'],
+          scores: { feasibility: 88, upsidePotential: 92, safetyFloor: 96, executionSpeed: 74, capitalEfficiency: 94 }
+        },
+        {
+          id: 'opt_performance_paid_burst',
+          title: 'Performance Paid Burst: SEO + Paid Social Arbitrage for Immediate Pipeline',
+          description: 'Day-trade attention with SEO velocity (Neil Patel / Rand Fishkin) + paid burst on underpriced platforms (Gary V) to fill pipeline now.',
+          weightPercentage: 31,
+          confidenceScore: 86,
+          pros: [
+            'Immediate pipeline in 2–4 weeks; pays for owned build while it compounds',
+            'Zero-click SEO moat via audience research (SparkToro) + intent-matched content velocity',
+            'Testable before scale — kill or scale with CAC guardrails',
+            'Direct attribution via Shlink + Umami → Listmonk → Twenty loop'
+          ],
+          cons: [
+            'Rented reach decays when spend stops; algorithm dependency risk (Rand Fishkin zero-click exposure)',
+            'Content velocity without tilt risks generic SEO that converts poorly',
+            'Paid CAC inflation if not capped and lifecycle-nurtured'
+          ],
+          riskLevel: 'MEDIUM',
+          expectedROI: '1.6x 60-day CAC payback, decays without owned conversion',
+          timeToValue: '2–4 weeks',
+          recommended: false,
+          verdictTag: 'VIABLE_ALTERNATIVE',
+          mitigationStrategy: 'Cap paid at 30% of mix; every paid unit must have a permission capture (lead magnet → Listmonk) and lifecycle nurture.',
+          supportingLeaders: ['Neil Patel', 'Rand Fishkin', 'Gary Vaynerchuk'],
+          scores: { feasibility: 90, upsidePotential: 86, safetyFloor: 72, executionSpeed: 94, capitalEfficiency: 78 }
+        },
+        {
+          id: 'opt_brand_category_play',
+          title: 'Category Design + Positioning Play (Play Bigger / Obviously Awesome)',
+          description: 'Design a new category where we are king (Lochhead) and anchor positioning (April Dunford) with a zag brand system (Neumeier).',
+          weightPercentage: 15,
+          confidenceScore: 78,
+          pros: [
+            'Category kings earn 76% of category value (Lochhead) — durable pricing power',
+            'Clear competitive context cures sales confusion (Dunford) — win-rate lift',
+            'Distinctive brand assets (Marty Neumeier / Byron Sharp) compound mental availability'
+          ],
+          cons: [
+            'Higher upfront narrative risk; category evangelism requires CEO-level commitment and 6–12 mo runway',
+            'Not a near-term pipeline fix — pipeline must be carried by the other two bets',
+            'Requires point-of-view content that most orgs underinvest in'
+          ],
+          riskLevel: 'MEDIUM',
+          expectedROI: 'Category premium + pricing power (12–24 mo horizon)',
+          timeToValue: '6–12 months',
+          recommended: false,
+          verdictTag: 'CONDITIONAL_OPTION',
+          mitigationStrategy: 'Run as parallel narrative bet funded by owned-audience flywheel; gate on Dunford positioning Canvas sign-off before scaling.',
+          supportingLeaders: ['Christopher Lochhead', 'April Dunford', 'Marty Neumeier'],
+          scores: { feasibility: 76, upsidePotential: 96, safetyFloor: 68, executionSpeed: 58, capitalEfficiency: 70 }
+        }
+      ];
+    }
+
+    // Scenario 5: Software / AI / Dev Architecture
     return [
       {
         id: 'opt_modular_deterministic_pipeline',

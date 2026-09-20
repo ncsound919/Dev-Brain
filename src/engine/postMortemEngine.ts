@@ -353,7 +353,7 @@ class PostMortemCalibrationEngine {
     const accuracyRate = Number(((successCount / completed.length) * 100).toFixed(1));
 
     // Sector breakdown
-    const sectors: SectorType[] = ['dev', 'business', 'financial', 'science_biotech', 'science_sports'];
+    const sectors: SectorType[] = ['dev', 'business', 'financial', 'marketing', 'science_biotech', 'science_sports'];
     const sectorPerformance = sectors.map(sec => {
       const secRecords = completed.filter(r => r.sector === sec);
       if (secRecords.length === 0) {
