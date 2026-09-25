@@ -6,20 +6,29 @@ import { ALL_LEADER_GENOMES } from "./src/data/genomes";
 import { SECTORS } from "./src/data/sectors";
 import { BUILT_IN_DECISION_TREES } from "./src/data/decisionTrees";
 import { runIntake, IntakeRequest, buildDecisionMatrix } from "./src/engine/intakeScorer";
+import { AgentIntegrationEngine } from "./src/engine/agentIntegrationEngine";
+import type { AgentActionPayload, DecisionDomain } from "./src/types";
+import {
+  jevStatus,
+  jevEnabled,
+  decideSystemOne,
+  decisionMatrixAdvisory,
+  buildMatrixChoiceAdvisory,
+} from "./src/engine/jevClient";
 
 // ─── Local-first LLM shim ─────────────────────────────────────────────────────
 // All handlers below used to call Gemini directly and hardcode gemini-3.7-flash.
 // They now go through createLLM(), which calls the local OpenAI-compatible
-// model (MiniCPM5-2B via llama.cpp) first and only falls back to Gemini when
-// the local server is unreachable or returns unusable output. Set
-// DISABLE_LOCAL_LLM=1 to force the old Gemini-only behaviour.
+// model (MiniCPM5-1B "Fable" via llama.cpp, alias minicpm5-fable) first and
+// only falls back to Gemini when the local server is unreachable or returns
+// unusable output. Set DISABLE_LOCAL_LLM=1 to force the old Gemini-only behaviour.
 const LOCAL_LLM_BASE_URL = (
   process.env.LOCAL_LLM_BASE_URL ||
   process.env.OLLAMA_BASE_URL ||
   "http://127.0.0.1:11434"
 ).replace(/\/+$/, "");
 const LOCAL_LLM_MODEL =
-  process.env.LOCAL_LLM_MODEL || process.env.OLLAMA_MODEL || "minicpm5-2b";
+  process.env.LOCAL_LLM_MODEL || process.env.OLLAMA_MODEL || "minicpm5-fable";
 const LOCAL_LLM_TIMEOUT_MS = Number(process.env.LOCAL_LLM_TIMEOUT_MS) || 300_000;
 
 function contentsToPrompt(contents: any): string {
@@ -62,7 +71,7 @@ async function localGenerate(
         messages,
         stream: false,
         temperature,
-        // Skip the reasoning pass: MiniCPM5-2B otherwise spends the whole
+        // Skip the reasoning pass: the Fable MiniCPM otherwise spends the whole
         // budget on reasoning_content (≈7× slower, often empty `content`).
         // Set LOCAL_LLM_THINK=1 to keep thinking enabled.
         ...(process.env.LOCAL_LLM_THINK === "1"
@@ -216,6 +225,66 @@ async function startServer() {
     }
   });
 
+  // -- TypeSafe Jev (System One) decision advisory -------------------------
+  // The deterministic matrix stays authoritative; Jev adds a calibrated
+  // choice advisory over the same options. Gateway unreachable / no key =>
+  // jev.source is 'offline' (never a fabricated recommendation).
+  app.get("/api/jev/status", async (_req, res) => {
+    try {
+      const status = await jevStatus();
+      res.json({ success: true, jev: status, enabled: jevEnabled() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Jev status failed." });
+    }
+  });
+
+  app.post("/api/decide/jev", async (req, res) => {
+    try {
+      const body = (req.body || {}) as Partial<IntakeRequest> & { candidates?: IntakeRequest['tools'] };
+      const candidates = Array.isArray(body.candidates)
+        ? body.candidates
+        : Array.isArray(body.tools)
+          ? body.tools
+          : [];
+      if (!body.problem && candidates.length === 0) {
+        return res.status(400).json({ error: "provide a problem and/or candidates to decide on." });
+      }
+      const matrix = buildDecisionMatrix({ tools: candidates, strategy: body.strategy, problem: body.problem });
+      const advisory = decisionMatrixAdvisory(matrix);
+      const result = await decideSystemOne({ state: advisory.state, questions: advisory.questions });
+      const jev = buildMatrixChoiceAdvisory(result, advisory.options);
+      res.json({ matrix, jev, decidedAt: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Jev decision failed." });
+    }
+  });
+
+  // -- Raw Jev passthrough (Ecosystem Control Center autonomy gate) ---------
+  // Lets a caller supply its own Jev state + questions (e.g. "may I stop
+  // cluster X?") without coupling to the IntakeRequest/matrix model. Thin
+  // passthrough to decideSystemOne; returns calibrated answers or source
+  // 'offline' — never a fabricated recommendation.
+  app.post("/api/decide/jev/raw", async (req, res) => {
+    try {
+      const secret = process.env.DEV_BRAIN_API_SECRET || process.env.CRON_SECRET;
+      if (secret) {
+        const auth = req.headers.authorization || "";
+        if (auth !== `Bearer ${secret}`) return res.status(401).json({ error: "Unauthorized" });
+      }
+      const body = (req.body || {}) as { state?: string; questions?: unknown };
+      if (typeof body.state === "string" && body.state.length > 20000) {
+        return res.status(413).json({ error: "state too large (max 20000 chars)." });
+      }
+      if (typeof body.state !== "string" || !body.state || !body.questions || typeof body.questions !== "object") {
+        return res.status(400).json({ error: "state (string) and questions (object) are required." });
+      }
+      const result = await decideSystemOne({ state: body.state, questions: body.questions as any });
+      res.json({ ...result, decidedAt: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Jev raw decision failed." });
+    }
+  });
+
   // -- Strategy Team adapter: ventures / proposals → deterministic ranking --
   // Draymond's strategy-team calls this to weight scout proposals by 90-day
   // revenue-engine fit + moat before persisting ventures. Deterministic alias
@@ -266,6 +335,35 @@ async function startServer() {
       res.json(matrix);
     } catch (err: any) {
       res.status(500).json({ error: err.message || "Marketing decide failed." });
+    }
+  });
+
+  // -- Governance gate: proposed agent action → deterministic verdict --
+  // The real policy brain: AgentIntegrationEngine runs hard guardrails +
+  // circuit breakers + the domain decision tree (e.g. public_communication's
+  // broadcast/refund gate) and returns APPROVED / REJECTED /
+  // ESCALATE_TO_FOUNDER / CONDITIONAL_APPROVAL with a full trace path.
+  // Draymond's marketing team calls this to gate every publish.
+  app.post("/api/governance/evaluate", (req, res) => {
+    try {
+      const body = (req.body || {}) as Partial<AgentActionPayload>;
+      if (!body.actionType) {
+        return res.status(400).json({ error: "provide actionType (e.g. 'public_communication')." });
+      }
+      const payload: AgentActionPayload = {
+        agentId: body.agentId || "draymond-marketing-team",
+        agentName: body.agentName || "Overlay365 Marketing Team",
+        actionType: body.actionType as DecisionDomain,
+        actionSummary: body.actionSummary || body.intent || "Marketing action",
+        parameters: body.parameters ?? {},
+        intent: body.intent || "Governance evaluation",
+        proposedExecutionTime: body.proposedExecutionTime,
+        callerEnvironment: body.callerEnvironment ?? "production",
+      };
+      const verdict = AgentIntegrationEngine.evaluateAction(payload);
+      res.json({ _adapter: "governance", verdict, decidedAt: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Governance evaluation failed." });
     }
   });
 
