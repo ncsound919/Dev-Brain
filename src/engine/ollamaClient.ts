@@ -10,7 +10,7 @@ import { DecisionMatrixEngine } from './decisionMatrixEngine';
 
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   baseUrl: 'http://127.0.0.1:11434',
-  selectedModel: 'minicpm5-2b',
+  selectedModel: 'minicpm5-fable',
   temperature: 0.3,
   topP: 0.9,
   systemPrompt: 'You are an expert executive decision analyst and tactical reasoning engine. When analyzing choices, provide rigorous percentage-weighted evaluations with detailed pros and cons.',
@@ -70,7 +70,7 @@ export class OllamaClient {
   }
 
   /**
-   * Direct text/reasoning generation via the local-first backend (MiniCPM5-2B,
+   * Direct text/reasoning generation via the local-first backend (Fable MiniCPM,
    * falling back to Gemini when the local server is unavailable).
    */
   public async generate(
@@ -165,7 +165,7 @@ export class OllamaClient {
 
   /**
    * Weighs decision options with percentage weights and pros/cons using the
-   * local-first LLM (MiniCPM5-2B, Gemini fallback).
+   * local-first LLM (Fable MiniCPM, Gemini fallback).
    */
   public async weighDecisionWithOptions(
     topic: string,

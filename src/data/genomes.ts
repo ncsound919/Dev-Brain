@@ -5,6 +5,7 @@ import { FINANCIAL_GENOMES } from './financialGenomes';
 import { MARKETING_GENOMES } from './marketingGenomes';
 import { BIOTECH_GENOMES } from './biotechGenomes';
 import { SPORTS_GENOMES } from './sportsGenomes';
+import { OPERATOR_COO_GENOME } from './operatorGenomes';
 
 export const ALL_LEADER_GENOMES: Record<string, LeaderGenome> = {
   ...DEV_GENOMES,
@@ -12,7 +13,8 @@ export const ALL_LEADER_GENOMES: Record<string, LeaderGenome> = {
   ...FINANCIAL_GENOMES,
   ...MARKETING_GENOMES,
   ...BIOTECH_GENOMES,
-  ...SPORTS_GENOMES
+  ...SPORTS_GENOMES,
+  'operator-coo': OPERATOR_COO_GENOME
 };
 
 // Backward-compatible alias for existing code
@@ -20,7 +22,7 @@ export const DEVELOPER_GENOMES = ALL_LEADER_GENOMES;
 
 export const GENOMES_BY_SECTOR: Record<SectorType, Record<string, LeaderGenome>> = {
   dev: DEV_GENOMES,
-  business: BUSINESS_GENOMES,
+  business: { ...BUSINESS_GENOMES, 'operator-coo': OPERATOR_COO_GENOME },
   financial: FINANCIAL_GENOMES,
   marketing: MARKETING_GENOMES,
   science_biotech: BIOTECH_GENOMES,
