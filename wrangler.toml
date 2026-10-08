@@ -1,0 +1,17 @@
+name = "dev-brain"
+main = "cf-worker.ts"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[containers]]
+class_name = "DevBrain"
+image = "./Dockerfile"
+max_instances = 1
+
+[[durable_objects.bindings]]
+name = "DEVBRAIN"
+class_name = "DevBrain"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DevBrain"]
