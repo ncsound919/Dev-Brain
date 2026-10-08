@@ -290,14 +290,23 @@ export async function decideSystemOne(input: SystemOneInput): Promise<JevResult>
     };
   }
 
+  let gatewayError: string | undefined;
   if (c.gateway.apiKey) {
     const r = await postSystemOne(c.gateway, input, c.timeoutMs, started);
     if (r.ok) return { ...r, source: 'vercel' };
+    gatewayError = r.error;
   }
 
   const local = await postSystemOne(c.local, input, c.timeoutMs, started);
   if (local.ok) return { ...local, source: 'localjev' };
-  return { ...local, source: 'offline' };
+  // Surface BOTH tier failures. Previously the gateway error was discarded and
+  // only the local one was returned, so a gateway 403 ("no model access") was
+  // masked as a generic local "offline" / "timed out" — hiding the real cause.
+  const error = [
+    gatewayError ? `gateway: ${gatewayError}` : null,
+    local.error ? `localjev: ${local.error}` : null,
+  ].filter(Boolean).join(' | ') || local.error;
+  return { ...local, source: 'offline', error };
 }
 
 function sleep(ms: number): Promise<void> {

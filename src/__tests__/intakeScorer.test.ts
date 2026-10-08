@@ -75,6 +75,27 @@ describe('decision matrix (primary decision layer)', () => {
     expect(a.options.map((o) => o.weightPercentage)).toEqual(b.options.map((o) => o.weightPercentage));
   });
 
+  it('differentiates free-text candidates by stated confidence/weight (regression: identical ties)', () => {
+    // Before the fix these three (title/description/confidence/weight only — no
+    // license/stars/platform/tags) all scored identically and the "recommended"
+    // option was simply the first listed.
+    const matrix = buildDecisionMatrix({
+      problem: 'adopt OSS tools or build our own?',
+      tools: [
+        { title: 'Adopt OSS end-to-end', description: 'wire existing tools', weightPercentage: 30, confidenceScore: 55 },
+        { title: 'Hybrid: adopt engine, build glue', description: 'own the wrapper', weightPercentage: 55, confidenceScore: 85 },
+        { title: 'Build in-house', description: 'reimplement', weightPercentage: 15, confidenceScore: 40 },
+      ],
+    });
+    const weights = matrix.options.map((o) => o.weightPercentage);
+    expect(new Set(weights).size).toBeGreaterThan(1); // no longer all tied
+    expect(matrix.options.filter((o) => o.recommended)).toHaveLength(1);
+    const hybrid = matrix.options.find((o) => o.title.startsWith('Hybrid'))!;
+    const build = matrix.options.find((o) => o.title.startsWith('Build'))!;
+    // higher stated confidence → higher upside score
+    expect(hybrid.scores.upsidePotential).toBeGreaterThan(build.scores.upsidePotential);
+  });
+
   it('differentiates agenda goals from repair items (primary decision layer)', () => {
     const matrix = buildDecisionMatrix({
       problem: 'focus + repair ordering',

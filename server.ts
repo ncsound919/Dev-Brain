@@ -19,7 +19,7 @@ import {
 // ─── Local-first LLM shim ─────────────────────────────────────────────────────
 // All handlers below used to call Gemini directly and hardcode gemini-3.7-flash.
 // They now go through createLLM(), which calls the local OpenAI-compatible
-// model (MiniCPM5-1B "Fable" via llama.cpp, alias minicpm5-fable) first and
+// model (MiniCPM5-1B "Fable" via llama.cpp, alias qwen3.5-2b) first and
 // only falls back to Gemini when the local server is unreachable or returns
 // unusable output. Set DISABLE_LOCAL_LLM=1 to force the old Gemini-only behaviour.
 const LOCAL_LLM_BASE_URL = (
@@ -28,7 +28,7 @@ const LOCAL_LLM_BASE_URL = (
   "http://127.0.0.1:11434"
 ).replace(/\/+$/, "");
 const LOCAL_LLM_MODEL =
-  process.env.LOCAL_LLM_MODEL || process.env.OLLAMA_MODEL || "minicpm5-fable";
+  process.env.LOCAL_LLM_MODEL || process.env.OLLAMA_MODEL || "qwen3.5-2b";
 const LOCAL_LLM_TIMEOUT_MS = Number(process.env.LOCAL_LLM_TIMEOUT_MS) || 300_000;
 
 function contentsToPrompt(contents: any): string {

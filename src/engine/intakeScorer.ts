@@ -30,6 +30,10 @@ export interface IntakeToolInput {
   platform?: string;
   /** domain tags matched against ECOSYSTEM_DOMAIN_KEYWORDS */
   tags?: string[];
+  /** caller's prior weight for this option in the final allocation (0-100) */
+  weightPercentage?: number;
+  /** caller's stated confidence in this option (0-100) */
+  confidenceScore?: number;
   /** optional manual override for estimatedImplementationWeeks */
   installWeeks?: number;
 }
@@ -168,22 +172,59 @@ export function scoreTool(tool: IntakeToolInput & { id?: string; title?: string 
     strategicUpside: isAgenda ? Math.max(relScore, 82) : relScore,
   };
 
+  // Explicit-signal mode: the /api/decide contract lets a caller state a prior
+  // weight and their own confidence. For a free-text decision the OSS-intake
+  // fields (license/stars/platform/tags) are absent, so every candidate would
+  // otherwise collapse to the same default rubric value and the matrix would
+  // tie — the caller's own signals are the only real evidence available.
+  const hasConfidence = typeof tool.confidenceScore === 'number' && Number.isFinite(tool.confidenceScore);
+  const hasWeight = typeof tool.weightPercentage === 'number' && Number.isFinite(tool.weightPercentage);
+  const explicitMode = hasConfidence || hasWeight;
+  const clamp100 = (n: number) => Math.min(100, Math.max(0, Math.round(n)));
+  const conf = hasConfidence ? clamp100(tool.confidenceScore as number) : 60;
+  const priorWeight = hasWeight ? clamp100(tool.weightPercentage as number) : 50;
+
+  let explicitScore = 0;
+  if (explicitMode) {
+    // 60% stated confidence + 40% prior weight → one 0-100 quality signal, then
+    // blended with the (mostly default) rubric so scales stay comparable.
+    explicitScore = clamp100(0.6 * conf + 0.4 * priorWeight);
+    preScreenScores.feasibility = clamp100(0.5 * explicitScore + 0.5 * platScore);
+    preScreenScores.constraintFit = clamp100(0.5 * explicitScore + 0.5 * licScore);
+    preScreenScores.complexityBoundedness = clamp100(0.5 * explicitScore + 0.5 * intScore);
+    preScreenScores.riskFloor = clamp100(0.5 * explicitScore + 0.5 * riskScoreVal);
+    preScreenScores.speedToValue = clamp100(0.5 * explicitScore + 0.5 * intScore);
+    preScreenScores.strategicUpside = explicitScore;
+  }
+
   const strengths: string[] = [];
   const vulnerabilities: string[] = [];
-  if (isAgenda) strengths.push('mission pull — advances a revenue engine / pillar');
-  if (isRepair) strengths.push('fast deterministic win — unblocks a failing surface');
-  if (licScore >= 80 && !isAgenda && !isRepair) strengths.push('permissive license (MIT/Apache) — fleet-safe to vendor');
-  else if (licScore <= 35 && !isAgenda && !isRepair) vulnerabilities.push('copyleft license — license-gate review before service wiring');
-  if (platScore >= 84 && !isAgenda && !isRepair) strengths.push('runs on this Windows host with minimal setup');
-  else if (platScore <= 70 && !isAgenda && !isRepair) vulnerabilities.push(`platform constraint: ${tool.platform || 'unknown'} — deploy surface needed`);
-  if (relScore >= 80 && !isAgenda && !isRepair) strengths.push('high relevance to a revenue engine / pillar');
-  else if (relScore < 80 && !isAgenda && !isRepair) vulnerabilities.push('low direct relevance to the four revenue engines');
-  if (matScore < 70 && !isAgenda && !isRepair) vulnerabilities.push('young repo — maturity signal is weak');
-  if (isAgenda || isRepair) vulnerabilities.push('confidence improves with enrichment (stars/license/platform)');
+  if (explicitMode) {
+    strengths.push(`stated confidence ${conf}/100`);
+    if (hasWeight) strengths.push(`prior weight ${priorWeight}% of the decision`);
+    // Only assert relevance when the caller actually gave us domain tags to judge it.
+    if (tags.length) {
+      if (relScore >= 80) strengths.push('high relevance to a revenue engine / pillar');
+      else vulnerabilities.push('low direct relevance to the four revenue engines');
+    }
+    if (tool.description) strengths.push(`basis: ${tool.description.slice(0, 120)}`);
+  } else {
+    if (isAgenda) strengths.push('mission pull — advances a revenue engine / pillar');
+    if (isRepair) strengths.push('fast deterministic win — unblocks a failing surface');
+    if (licScore >= 80 && !isAgenda && !isRepair) strengths.push('permissive license (MIT/Apache) — fleet-safe to vendor');
+    else if (licScore <= 35 && !isAgenda && !isRepair) vulnerabilities.push('copyleft license — license-gate review before service wiring');
+    if (platScore >= 84 && !isAgenda && !isRepair) strengths.push('runs on this Windows host with minimal setup');
+    else if (platScore <= 70 && !isAgenda && !isRepair) vulnerabilities.push(`platform constraint: ${tool.platform || 'unknown'} — deploy surface needed`);
+    if (relScore >= 80 && !isAgenda && !isRepair) strengths.push('high relevance to a revenue engine / pillar');
+    else if (relScore < 80 && !isAgenda && !isRepair) vulnerabilities.push('low direct relevance to the four revenue engines');
+    if (matScore < 70 && !isAgenda && !isRepair) vulnerabilities.push('young repo — maturity signal is weak');
+    if (isAgenda || isRepair) vulnerabilities.push('confidence improves with enrichment (stars/license/platform)');
+  }
 
   const audit =
     `license=${licScore}, platform=${platScore}, integration=${intScore}, ` +
-    `maturity=${matScore}, relevance=${relScore}, risk=${riskScoreVal}`;
+    `maturity=${matScore}, relevance=${relScore}, risk=${riskScoreVal}` +
+    (explicitMode ? `, explicit=${explicitScore}(conf=${conf},weight=${priorWeight})` : '');
 
   return {
     id: `intake_${name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,

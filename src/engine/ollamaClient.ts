@@ -10,7 +10,7 @@ import { DecisionMatrixEngine } from './decisionMatrixEngine';
 
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   baseUrl: 'http://127.0.0.1:11434',
-  selectedModel: 'minicpm5-fable',
+  selectedModel: 'qwen3.5-2b',
   temperature: 0.3,
   topP: 0.9,
   systemPrompt: 'You are an expert executive decision analyst and tactical reasoning engine. When analyzing choices, provide rigorous percentage-weighted evaluations with detailed pros and cons.',

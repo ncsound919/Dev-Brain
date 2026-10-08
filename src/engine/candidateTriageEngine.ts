@@ -220,6 +220,8 @@ export class CandidateTriageEngine {
     const rawScores = top5.map(c => Math.max(10, c.compositeTriageScore));
     const total = rawScores.reduce((a, b) => a + b, 0);
 
+    const bestScore = top5.reduce((m, c) => Math.max(m, c.compositeTriageScore), -Infinity);
+
     let allocatedSum = 0;
     return top5.map((c, idx) => {
       let weight = Math.round((rawScores[idx] / total) * 100);
@@ -228,6 +230,7 @@ export class CandidateTriageEngine {
       } else {
         allocatedSum += weight;
       }
+      const isBest = c.compositeTriageScore === bestScore;
 
       const leaderName = c.supportingLeaderGenomeId
         ? ALL_LEADER_GENOMES[c.supportingLeaderGenomeId]?.name || 'Principal Architect'
@@ -244,8 +247,8 @@ export class CandidateTriageEngine {
         riskLevel: c.preScreenScores.riskFloor > 75 ? 'LOW' : c.preScreenScores.riskFloor > 55 ? 'MEDIUM' : 'HIGH',
         expectedROI: `${(c.preScreenScores.strategicUpside / 12).toFixed(1)}x Risk-Adjusted ROI`,
         timeToValue: `${c.estimatedImplementationWeeks} weeks to production`,
-        recommended: idx === 0,
-        verdictTag: idx === 0 ? 'STRONGLY_RECOMMENDED' : idx === 1 ? 'VIABLE_ALTERNATIVE' : 'CONDITIONAL_OPTION',
+        recommended: isBest,
+        verdictTag: isBest ? 'STRONGLY_RECOMMENDED' : idx <= 1 ? 'VIABLE_ALTERNATIVE' : 'CONDITIONAL_OPTION',
         mitigationStrategy: `Establish circuit-breakers around ${c.keyVulnerabilities[0]?.toLowerCase() || 'execution bottlenecks'}.`,
         supportingLeaders: [leaderName],
         scores: {

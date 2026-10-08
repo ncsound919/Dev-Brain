@@ -17,7 +17,7 @@
  * on total failure so callers keep their own deterministic fallback.
  */
 
-const DEFAULT_URL = 'http://127.0.0.1:3000';
+const DEFAULT_URL = 'http://127.0.0.1:4700';
 const DEFAULT_PROJECT = 'prj-mt7jrul1'; // overlay365-fleet
 const DEFAULT_ENV = 'production';
 
