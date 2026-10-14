@@ -26,3 +26,7 @@ Thumbs.db
 
 # Misc local state
 *.tsbuildinfo
+
+# runtime artifacts (recreated on every start)
+devbrain.err
+devbrain.pid
