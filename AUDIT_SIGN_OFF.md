@@ -6,6 +6,29 @@
 
 ---
 
+> ## ⚠️ CORRECTION — 2026-10-15 (this sign-off is partially false)
+>
+> A later audit (`Coding lessons/2026-10-15-dev-brain-audit-...`) found that two claims
+> below are **contradicted by the code**:
+>
+> - **"no randomness" (lines 14, 49, 50, 65, 68, 72, 192-195, 200, 379, 433-435, 454)** is
+>   false for `src/engine/genomeMutationEngine.ts`, whose fallback (and, while the LLM lane
+>   is down, only path) is `Math.random()` per generation with no selection pressure —
+>   measured: two identical runs produced different fitness arrays. `fatigueDriftEngine` and
+>   `opponentTwinEngine` likewise fall back to fixed/random data.
+> - **The multi-agent "consensus"** (`src/engine/orchestrator.ts`) computes `agreementLevel`
+>   from the *agent count* (`0.72 + n/25·0.25`), not from any agreement, and ignores the
+>   problem argument entirely.
+>
+> **What remains true:** the deterministic core — `intakeScorer`, `candidateTriageEngine`,
+> `decisionMatrixEngine`, `guardrailEngine`, `decisionTreeEngine`, `agentIntegrationEngine` —
+> is real, LLM-free and reproducible, and is the part the fleet should depend on. The
+> randomness claims apply only to the LLM-backed satellite engines, which must not be
+> described as deterministic. This note exists so no future reader treats the 2024 sign-off
+> as a clean bill of health.
+
+---
+
 ## Executive Summary
 
 Dev Brain has been **fully audited and verified** as:

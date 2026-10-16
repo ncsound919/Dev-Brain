@@ -12,7 +12,7 @@
  */
 
 import type { DecisionMatrixResult, WeightedDecisionOption } from '../types';
-import { resolveSecret } from './keywireSecret';
+import { resolveSecret } from './infisicalSecret';
 
 export type JevState = string | unknown[] | Record<string, unknown>;
 
@@ -62,17 +62,17 @@ const GATEWAY_MODEL_DEFAULT = 'typesafe-ai/jev';
 const LOCAL_BASE_URL_DEFAULT = 'http://127.0.0.1:8080';
 const LOCAL_MODEL_DEFAULT = 'jev-latest';
 
-/** Keywire vault key name for the Vercel AI Gateway / TypeSafe credential. */
+/** Infisical key name for the Vercel AI Gateway / TypeSafe credential. */
 const GATEWAY_KEY_NAME = 'AI_GATEWAY_API_KEY';
 
-type GatewayKeySource = 'keywire' | 'env' | 'none' | 'unresolved';
+type GatewayKeySource = 'infisical' | 'env' | 'none' | 'unresolved';
 let resolvedGatewayKey: string | undefined;
 let gatewayKeySource: GatewayKeySource = 'unresolved';
 
-/** Resolve the gateway key Keywire-FIRST (env fallback), once per process. */
+/** Resolve the gateway key Infisical-FIRST (env fallback), once per process. */
 export async function ensureJevGatewayKey(): Promise<string> {
   if (gatewayKeySource !== 'unresolved') return resolvedGatewayKey ?? '';
-  const r = await resolveSecret(GATEWAY_KEY_NAME, { preferKeywire: true });
+  const r = await resolveSecret(GATEWAY_KEY_NAME, { preferInfisical: true });
   resolvedGatewayKey = r.value || undefined;
   gatewayKeySource = r.source;
   return resolvedGatewayKey ?? '';
@@ -120,7 +120,7 @@ export interface JevStatus {
   tiers: JevTierStatus[];
   online: boolean;
   checkedAt?: number;
-  /** Where the gateway key was resolved from: Keywire vault (primary) or env. */
+  /** Where the gateway key was resolved from: Infisical vault (primary) or env. */
   keySource?: GatewayKeySource;
 }
 

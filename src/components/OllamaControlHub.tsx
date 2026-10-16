@@ -23,6 +23,19 @@ interface OllamaControlHubProps {
   onApplyMatrixToMainApp?: (matrix: DecisionMatrixResult) => void;
 }
 
+/**
+ * Friendly label for a model id. The local lane reports the GGUF's full path
+ * as its id, so display the basename with the extension stripped; anything
+ * without a path/extension is shown unchanged. (This helper was referenced at
+ * lines 218/243 but never defined — a real TS2304 compile error, fixed
+ * 2026-10-15.)
+ */
+function modelDisplayName(name: string): string {
+  if (!name) return name;
+  const base = name.replace(/\\/g, '/').split('/').pop() ?? name;
+  return base.replace(/\.gguf$/i, '');
+}
+
 export const OllamaControlHub: React.FC<OllamaControlHubProps> = ({
   onApplyMatrixToMainApp
 }) => {
@@ -215,7 +228,8 @@ export const OllamaControlHub: React.FC<OllamaControlHubProps> = ({
               >
                 {config.availableModels.map((m) => (
                   <option key={m.name} value={m.name}>
-                    {m.name} {m.details?.parameter_size ? `(${m.details.parameter_size})` : ''}
+                    {modelDisplayName(m.name)}
+                    {m.details?.parameter_size ? ` (${m.details.parameter_size})` : ''}
                   </option>
                 ))}
               </select>
@@ -225,13 +239,24 @@ export const OllamaControlHub: React.FC<OllamaControlHubProps> = ({
                   type="text"
                   value={config.selectedModel}
                   onChange={(e) => handleModelChange(e.target.value)}
-                  placeholder="llama3.2"
+                  placeholder="Phi-4-mini-instruct.Q8_0.gguf"
                   className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-blue-400"
                 />
               </div>
             )}
+            {/* Recommend what is installed, not what could be. The old line named
+                three models the machine does not run, which invited a reinstall
+                every time someone read the panel. The detected list is the
+                authority; when it is empty, say plainly that it is empty. */}
             <p className="text-[10px] text-slate-500 font-mono">
-              Recommended: <code className="text-amber-400">llama3.2:3b</code>, <code className="text-amber-400">qwen2.5:7b</code>, or <code className="text-amber-400">mistral:7b</code>
+              {config.availableModels.length > 0
+                ? <>
+                    Detected:{' '}
+                    <code className="text-amber-400">
+                      {config.availableModels.map((m) => modelDisplayName(m.name)).join(', ')}
+                    </code>
+                  </>
+                : 'No models detected — the local endpoint did not answer.'}
             </p>
           </div>
 

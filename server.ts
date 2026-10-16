@@ -16,19 +16,33 @@ import {
   buildMatrixChoiceAdvisory,
 } from "./src/engine/jevClient";
 
-// ─── Local-first LLM shim ─────────────────────────────────────────────────────
+// ─── Local-first LLM shim — llama.cpp, NOT Ollama ───────────────────────────
 // All handlers below used to call Gemini directly and hardcode gemini-3.7-flash.
 // They now go through createLLM(), which calls the local OpenAI-compatible
-// model (MiniCPM5-1B "Fable" via llama.cpp, alias qwen3.5-2b) first and
-// only falls back to Gemini when the local server is unreachable or returns
-// unusable output. Set DISABLE_LOCAL_LLM=1 to force the old Gemini-only behaviour.
+// model first and only falls back to Gemini when the local server is
+// unreachable or returns unusable output. Set DISABLE_LOCAL_LLM=1 to force the
+// old Gemini-only behaviour.
+//
+// The wire format has ALWAYS been llama.cpp's — `/v1/chat/completions`, with
+// `chat_template_kwargs` in the body (a llama.cpp construct; Ollama uses
+// `options` and would reject it). But the defaults pointed at :11434, which is
+// Ollama's port, where nothing on this machine listens. Every local call
+// therefore failed and silently cascaded to Gemini, so a "local-first" shim was
+// local-last in practice and nothing surfaced the fallback. The defaults below
+// are the runtime actually installed: llama-server on :8091 serving
+// Phi-4-mini-instruct from INFRASTRUCTURE/model-router/models/.
+//
+// The model id is the GGUF's full path because that is what llama.cpp reports as
+// its id and expects back in a request. Shortening it here yields a 404.
 const LOCAL_LLM_BASE_URL = (
   process.env.LOCAL_LLM_BASE_URL ||
-  process.env.OLLAMA_BASE_URL ||
-  "http://127.0.0.1:11434"
+  process.env.LLAMA_CPP_BASE_URL ||
+  "http://127.0.0.1:8091"
 ).replace(/\/+$/, "");
 const LOCAL_LLM_MODEL =
-  process.env.LOCAL_LLM_MODEL || process.env.OLLAMA_MODEL || "qwen3.5-2b";
+  process.env.LOCAL_LLM_MODEL ||
+  process.env.LLAMA_CPP_MODEL ||
+  "C:\\Users\\User\\Downloads\\BUSINESS\\INFRASTRUCTURE\\model-router\\models\\Phi-4-mini-instruct.Q8_0.gguf";
 const LOCAL_LLM_TIMEOUT_MS = Number(process.env.LOCAL_LLM_TIMEOUT_MS) || 300_000;
 
 function contentsToPrompt(contents: any): string {
@@ -150,7 +164,13 @@ function createLLM() {
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  // 3450, not 3000. 3000 is Grafana on this host, and every consumer —
+  // dev-brain-mcp.ts:35, openhub's serviceManager, recourse, omniresearch —
+  // defaults to 3450. Measured 2026-10-15: with no PORT set the old default
+  // bound/logged :3000 while Grafana answered on that address, so a
+  // default-started Dev-Brain is one the fleet is not looking at (or a
+  // collision). The default now matches the contract.
+  const PORT = Number(process.env.PORT) || 3450;
   const HOST = process.env.HOST || "127.0.0.1";
 
   app.use(express.json());
@@ -179,11 +199,15 @@ async function startServer() {
       },
       backends: {
         deterministicEngine: true,
+        // Config fact, NOT a liveness claim: /api/status is synchronous, so it
+        // cannot probe the endpoint. The line below used to read
+        //   ollama: Boolean(process.env.OLLAMA_HOST || "http://localhost:11434")
+        // which is a non-empty string and therefore always true — it named a
+        // daemon that is not installed and reported it as present.
         local: process.env.DISABLE_LOCAL_LLM !== "1",
         localModel: LOCAL_LLM_MODEL,
         localBaseUrl: LOCAL_LLM_BASE_URL,
         gemini: Boolean(process.env.GEMINI_API_KEY),
-        ollama: Boolean(process.env.OLLAMA_HOST || "http://localhost:11434"),
       },
       environment: {
         host: HOST,
@@ -770,8 +794,18 @@ Ensure exactly ${timeHorizonMonths} objects. Start with structuralIntegrity near
     });
   }
 
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`[dev-brain] Server running on http://${HOST}:${PORT}`);
+  });
+  // A failed bind must be a hard, diagnosable exit. Without this the process
+  // emits an unhandled 'error' event and dies while (on the earlier default)
+  // the "Server running" line had already printed — a startup log that says
+  // running over a port someone else holds. Named errno, non-zero exit.
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    console.error(
+      `[dev-brain] FATAL: could not bind ${HOST}:${PORT} (${err.code ?? 'error'}): ${err.message}`,
+    );
+    process.exit(1);
   });
 }
 

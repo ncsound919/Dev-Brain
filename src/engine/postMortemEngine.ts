@@ -1,5 +1,18 @@
 import { PostMortemRecord, CalibrationOverview, SectorType, WeightAdjustmentRecommendation, LeaderGenome, MetricVariance } from '../types';
 
+/**
+ * ILLUSTRATIVE SEEDS — NOT REAL POST-MORTEMS.
+ *
+ * These five records (Kafka migration, fractional-Kelly FX market maker, …) are
+ * hand-authored examples illustrating the calibration shape. Their Brier scores
+ * are computed over invented `actualOutcomeBinary` values, so no calibration
+ * statistic derived from them measures the fleet's decision quality.
+ *
+ * Flagged 2026-10-15 (audit `2026-10-15-dev-brain-audit-...`). Before this
+ * engine can calibrate anything, real records need a write path (an endpoint +
+ * persistence); until then the calibration overview is a demo over fixtures and
+ * must not be read as a track record.
+ */
 export const INITIAL_POST_MORTEM_RECORDS: PostMortemRecord[] = [
   {
     id: 'pm-dev-001',

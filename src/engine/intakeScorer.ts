@@ -264,8 +264,17 @@ export function runIntake(req: IntakeRequest): IntakeResponse {
   let triage: PreDecisionTriageResult | null = null;
   let ranked = candidates;
 
-  if (candidates.length >= 5) {
-    triage = CandidateTriageEngine.runTriage(problem, strategy, 'dev', candidates);
+  // A problem with NO candidates is the case the curated brain exists for:
+  // runTriage falls back to generateCandidatePool when handed no custom pool,
+  // so /api/decide can actually propose options instead of returning zero
+  // (measured 2026-10-15: a problem-only decide returned totalOptionsCount 0
+  // because runIntake only triaged at >=5 candidates and runTriage only used
+  // its pools below 5 — mutually exclusive, so the pools were unreachable over
+  // HTTP). 1-4 caller-supplied candidates stay on the explicit-signal path
+  // below: those ARE the options to score, not a request for the pool.
+  const useCuratedPool = candidates.length === 0 && problem.trim().length > 0;
+  if (candidates.length >= 5 || useCuratedPool) {
+    triage = CandidateTriageEngine.runTriage(problem, strategy, 'dev', useCuratedPool ? undefined : candidates);
     const byId = new Map(candidates.map((c) => [c.id, c]));
     ranked = [...triage.top5Methods, ...triage.prunedMethods].map((c) => {
       const orig = byId.get(c.id);

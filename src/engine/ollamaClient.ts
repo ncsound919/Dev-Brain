@@ -8,9 +8,24 @@ import {
 } from '../types';
 import { DecisionMatrixEngine } from './decisionMatrixEngine';
 
+/**
+ * Defaults point at the runtime that is ACTUALLY on this machine.
+ *
+ * The previous defaults were `http://127.0.0.1:11434` (Ollama) and
+ * `qwen3.5-2b` (a "Fable MiniCPM" alias). Nothing listens on :11434 here, and
+ * the model on disk is Phi-4-mini-instruct served by llama.cpp on :8091. The
+ * defaults are now the live llama.cpp endpoint, overridable with
+ * LOCAL_LLM_BASE_URL / LOCAL_LLM_MODEL the same way the server side is.
+ */
+const DEFAULT_BASE_URL =
+  (typeof process !== 'undefined' && process.env?.LOCAL_LLM_BASE_URL) ||
+  'http://127.0.0.1:8091';
+
 export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
-  baseUrl: 'http://127.0.0.1:11434',
-  selectedModel: 'qwen3.5-2b',
+  baseUrl: DEFAULT_BASE_URL.replace(/\/+$/, ''),
+  selectedModel:
+    (typeof process !== 'undefined' && process.env?.LOCAL_LLM_MODEL) ||
+    'C:\\Users\\User\\Downloads\\BUSINESS\\INFRASTRUCTURE\\model-router\\models\\Phi-4-mini-instruct.Q8_0.gguf',
   temperature: 0.3,
   topP: 0.9,
   systemPrompt: 'You are an expert executive decision analyst and tactical reasoning engine. When analyzing choices, provide rigorous percentage-weighted evaluations with detailed pros and cons.',
@@ -21,6 +36,21 @@ export const DEFAULT_OLLAMA_CONFIG: OllamaConfig = {
   isChecking: false,
   availableModels: []
 };
+
+/**
+ * Short label for display only.
+ *
+ * llama.cpp reports the GGUF's full Windows path as the model id, so a raw
+ * render puts a 90-character path in a <select>. This reduces it to the
+ * filename for display; `name` and `model` stay the real id, because that is
+ * what a chat request has to send. This is presentation, not invention — the
+ * id itself is never rewritten.
+ */
+export function modelDisplayName(id: string): string {
+  if (!id) return '';
+  const slash = Math.max(id.lastIndexOf('/'), id.lastIndexOf('\\'));
+  return slash >= 0 ? id.slice(slash + 1) : id;
+}
 
 export class OllamaClient {
   private config: OllamaConfig;
@@ -39,22 +69,79 @@ export class OllamaClient {
   }
 
   /**
-   * Ping and check connection to local Ollama server, fetching available models
+   * Discover the models that are ACTUALLY running.
+   *
+   * This used to fabricate a one-entry list — a model named whatever
+   * `selectedModel` happened to be, stamped `family: minicpm5`,
+   * `parameter_size: 2B`, `Q4_K_M`, and `isConnected: true`, with no network
+   * request made at all. That is why the Hub read "1 models detected —
+   * qwen3.5-2b (2B)" while the machine was serving Phi-4-mini on :8091: the
+   * inventory was invented, not read. A UI that cannot be wrong is a UI that
+   * cannot be right, and it will keep agreeing with whatever stale alias is
+   * left in the config.
+   *
+   * It now reads a real `/v1/models` endpoint. When that fails it reports
+   * `connected: false` with the real reason, because "unreachable" and
+   * "running Phi-4" are different facts and the Hub must be able to tell them.
    */
   public async checkConnection(): Promise<{
     connected: boolean;
     models: OllamaModelInfo[];
     error?: string;
   }> {
-    const modelName = this.config.selectedModel || DEFAULT_OLLAMA_CONFIG.selectedModel;
-    const models: OllamaModelInfo[] = [{
-      name: modelName,
-      model: modelName,
-      modified_at: new Date().toISOString(),
-      size: 0,
-      digest: "local",
-      details: { format: "gguf", family: "minicpm5", parameter_size: "2B", quantization_level: "Q4_K_M" }
-    }];
+    this.config = { ...this.config, isChecking: true, connectionError: undefined };
+
+    const base = (this.config.baseUrl || DEFAULT_OLLAMA_CONFIG.baseUrl).replace(/\/+$/, '');
+    const timeout = AbortSignal.timeout(5000);
+
+    let models: OllamaModelInfo[] = [];
+    let error: string | undefined;
+
+    try {
+      const res = await fetch(`${base}/v1/models`, { signal: timeout });
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${base}/v1/models`);
+      const body: any = await res.json();
+      const list: any[] = Array.isArray(body?.models) ? body.models : [];
+
+      models = list.map((m) => ({
+        name: String(m?.name ?? m?.model ?? ''),
+        model: String(m?.model ?? m?.name ?? ''),
+        // Use the server's own values. `size` may be empty; do not invent one.
+        modified_at: String(m?.modified_at ?? ''),
+        size: Number(m?.size ?? 0),
+        digest: String(m?.digest ?? ''),
+        details: {
+          // llama.cpp reports the GGUF path as the model id and supplies no
+          // details block. Absence must stay absent rather than become a guess.
+          format: m?.details?.format ?? 'gguf',
+          family: m?.details?.family ?? '',
+          parameter_size: m?.details?.parameter_size ?? '',
+          quantization_level: m?.details?.quantization_level ?? '',
+        },
+      })).filter((m) => m.name);
+    } catch (e: any) {
+      error = e?.name === 'TimeoutError'
+        ? `${base} did not answer /v1/models within 5s`
+        : `${e?.message ?? String(e)} (tried ${base})`;
+    }
+
+    if (error) {
+      this.config = {
+        ...this.config,
+        isConnected: false,
+        isChecking: false,
+        lastChecked: new Date().toISOString(),
+        availableModels: [],
+        connectionError: error,
+      };
+      return { connected: false, models: [], error };
+    }
+
+    // Keep the selection valid: a previously chosen alias that no longer exists
+    // would otherwise send requests to a model the server does not serve.
+    const previous = this.config.selectedModel;
+    const stillPresent = models.some((m) => m.name === previous || m.model === previous);
+    const selectedModel = stillPresent ? previous : (models[0]?.model ?? models[0]?.name ?? '');
 
     this.config = {
       ...this.config,
@@ -62,8 +149,7 @@ export class OllamaClient {
       isChecking: false,
       lastChecked: new Date().toISOString(),
       availableModels: models,
-      selectedModel: modelName,
-      connectionError: undefined
+      ...(stillPresent ? {} : { selectedModel }),
     };
 
     return { connected: true, models };
